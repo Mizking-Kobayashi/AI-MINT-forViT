@@ -11,25 +11,29 @@ import SwiftUI
 struct ContentView: View {
     @State private var images: [NSImage] = []
     @State private var isCapturing: Bool = false // 撮影開始/停止のフラグ
+
     var body: some View {
-            ZStack(alignment: .top) { // ZStackを使ってカメラの上にテキストを重ねる
-                CameraView(isCapturing: $isCapturing) { capturedImage in
+        VStack {
+            ZStack(alignment: .center) {
+                CameraView(isCapturing: $isCapturing, onCapture: { capturedImage in
+                    print("Captured image received")
                     if images.count < 98 {
-                        images.append(capturedImage) // 画像を配列に追加
+                        images.append(capturedImage)
+                        print("Current image count: \(images.count)")
                     }
-                }
+                }, onCaptureComplete: {
+                    print("撮影完了 - ContentView 側")
+                    isCapturing = false // 明示的に更新
+                })
                 .frame(width: 640, height: 480)
-                
-                // 赤枠を描画（もし必要なら）
+
+                // 赤枠の描画
                 Rectangle()
                     .stroke(Color.red.opacity(0.2), lineWidth: 2)
                     .frame(width: 100, height: 100)
-                    .position(x: 640 / 2, y: 480 / 2) // カメラフレームの中央に配置
-
-                .frame(width: 640, height: 480, alignment: .top) // カメラサイズに合わせて上に揃える
             }
             .padding()
-        
+
             // 撮影開始ボタン
             Button(action: {
                 if !isCapturing {
@@ -40,10 +44,12 @@ struct ContentView: View {
                 Text(isCapturing ? "撮影中..." : "撮影開始")
                     .font(.title)
                     .padding()
+                    .background(isCapturing ? Color.red : Color.blue)
                     .cornerRadius(10)
             }
             .padding()
         }
+    }
 }
 
 #Preview {

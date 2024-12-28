@@ -1,0 +1,17 @@
+# macOS のシステムファイル
+.DS_Store
+
+# Xcodeのユーザー設定ファイル
+xcuserdata/
+
+# Swiftのキャッシュファイル
+DerivedData/
+
+# ビルド成果物
+build/
+*.app
+
+# その他特定のファイル
+.env
+logs/
+*.log
