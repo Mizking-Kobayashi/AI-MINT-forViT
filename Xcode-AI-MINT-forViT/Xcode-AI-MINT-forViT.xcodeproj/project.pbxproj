@@ -30,6 +30,20 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		774489E92D214BAD00D51FAE /* Exceptions for "Xcode-AI-MINT-forViT" folder in "Xcode-AI-MINT-forViTTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"AI-MINT-ViT1.mlpackage",
+			);
+			target = 775773D72D16EEA700C315BE /* Xcode-AI-MINT-forViTTests */;
+		};
+		774489EA2D214BAD00D51FAE /* Exceptions for "Xcode-AI-MINT-forViT" folder in "Xcode-AI-MINT-forViTUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"AI-MINT-ViT1.mlpackage",
+			);
+			target = 775773E12D16EEA700C315BE /* Xcode-AI-MINT-forViTUITests */;
+		};
 		7766ED882D170298001324D8 /* Exceptions for "Xcode-AI-MINT-forViT" folder in "Xcode-AI-MINT-forViT" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -44,6 +58,8 @@
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
 				7766ED882D170298001324D8 /* Exceptions for "Xcode-AI-MINT-forViT" folder in "Xcode-AI-MINT-forViT" target */,
+				774489E92D214BAD00D51FAE /* Exceptions for "Xcode-AI-MINT-forViT" folder in "Xcode-AI-MINT-forViTTests" target */,
+				774489EA2D214BAD00D51FAE /* Exceptions for "Xcode-AI-MINT-forViT" folder in "Xcode-AI-MINT-forViTUITests" target */,
 			);
 			path = "Xcode-AI-MINT-forViT";
 			sourceTree = "<group>";
