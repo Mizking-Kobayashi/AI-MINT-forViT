@@ -1,5 +1,6 @@
 import SwiftUI
 import AVFoundation
+import AppKit
 
 struct CameraView: NSViewRepresentable {
     @Binding var isCapturing: Bool // 撮影開始/停止の状態
@@ -71,6 +72,7 @@ struct CameraView: NSViewRepresentable {
                         timer?.invalidate()
                         DispatchQueue.main.async {
                             self.isCapturing = false
+                            self.photonum = 0
                             self.onCaptureComplete?() // ContentView に通知
                         }
                     }
@@ -101,6 +103,23 @@ struct CameraView: NSViewRepresentable {
             }
         }
 }
+
+extension NSImage {
+    func cropped(to rect: CGRect) -> NSImage? {
+        guard let cgImage = self.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            print("CGImageの取得に失敗しました")
+            return nil
+        }
+
+        guard let croppedCGImage = cgImage.cropping(to: rect) else {
+            print("画像のクロップに失敗しました")
+            return nil
+        }
+
+        return NSImage(cgImage: croppedCGImage, size: NSSize(width: rect.width, height: rect.height))
+    }
+}
+
 
 extension CameraView.CameraPreviewView: AVCapturePhotoCaptureDelegate {
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
