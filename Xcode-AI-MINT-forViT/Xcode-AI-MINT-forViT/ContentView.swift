@@ -6,6 +6,7 @@ struct ContentView: View {
     @State private var predictionResult: String? = nil
     @State private var isCapturing: Bool = false // 初期値は `false` に設定して撮影をすぐに開始しない
     @State private var cameraPermissionGranted: Bool = false // カメラ許可の状態を管理
+    private let saveDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
 
     private let modelHandler = AIModelHandler()
     private let imagePreprocessor = ImagePreprocessor()
@@ -89,11 +90,29 @@ struct ContentView: View {
     }
 
     private func handleCapturedImage(_ capturedImage: NSImage) {
-        let cropRect = CGRect(x: (640 - 200) / 2, y: (480 - 200) / 2, width: 200, height: 200)
+        // 画像サイズを取得
+        guard let cgImage = capturedImage.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
+            print("CGImageへの変換に失敗しました")
+            return
+        }
+
+        // クロップするサイズ (200x200)
+        let cropWidth: CGFloat = 430
+        let cropHeight: CGFloat = 430
+
+        // 中央を基準にクロップ領域を設定
+        let offsetX = (CGFloat(cgImage.width) - cropWidth) / 2
+        let offsetY = (CGFloat(cgImage.height) - cropHeight) / 2
+
+        let cropRect = CGRect(x: offsetX, y: offsetY, width: cropWidth, height: cropHeight)
+
         if let croppedImage = capturedImage.cropped(to: cropRect) {
             if images.count < 98 {
                 images.append(croppedImage)
                 print("Current cropped image count: \(images.count)")
+
+                // 画像をドキュメントに保存
+                saveImageToDisk(croppedImage, index: images.count)
             }
         } else {
             print("画像のクロップに失敗しました")
@@ -104,6 +123,24 @@ struct ContentView: View {
             predictFromImages()
         }
     }
+
+
+    private func saveImageToDisk(_ image: NSImage, index: Int) {
+            let fileURL = saveDirectory.appendingPathComponent("captured_image_\(index).png")
+            guard let tiffData = image.tiffRepresentation,
+                  let bitmapRep = NSBitmapImageRep(data: tiffData),
+                  let pngData = bitmapRep.representation(using: .png, properties: [:]) else {
+                print("画像の保存に失敗しました: \(index)")
+                return
+            }
+
+            do {
+                try pngData.write(to: fileURL)
+                print("画像を保存しました: \(fileURL.path)")
+            } catch {
+                print("画像の保存中にエラーが発生しました: \(error.localizedDescription)")
+            }
+        }
 
     private func predictFromImages() {
         print("画像をAIモデルに送信します...")

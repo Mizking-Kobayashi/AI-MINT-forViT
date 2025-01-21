@@ -2,6 +2,7 @@ import SwiftUI
 import AVFoundation
 import AppKit
 
+// CameraView
 struct CameraView: NSViewRepresentable {
     @Binding var isCapturing: Bool // 撮影開始/停止の状態
     var onCapture: (NSImage) -> Void // クロージャを追加
@@ -15,7 +16,6 @@ struct CameraView: NSViewRepresentable {
         var photonum = 0
         var onCapture: ((NSImage) -> Void)? // クロージャを持たせる
         var isCapturing: Bool = false
-        
         var onCaptureComplete: (() -> Void)?
 
         override init(frame frameRect: NSRect) {
@@ -51,7 +51,7 @@ struct CameraView: NSViewRepresentable {
 
         // 1回だけ撮影を開始する
         func startCapturingPhotos() {
-            timer = Timer.scheduledTimer(withTimeInterval: 0.05, repeats: true) { [weak self] _ in
+            timer = Timer.scheduledTimer(withTimeInterval: 0.033, repeats: true) { [weak self] _ in
                 guard let self = self else { return }
                 if self.photonum < 98 {
                     self.capturePhoto() // 画像をキャプチャ
@@ -62,22 +62,21 @@ struct CameraView: NSViewRepresentable {
         }
 
         private func capturePhoto() {
-                    let settings = AVCapturePhotoSettings()
-                    photoOutput.capturePhoto(with: settings, delegate: self)
-                    photonum += 1 // 撮影回数をカウント
-                    print("Captured photo #\(photonum)")
+            let settings = AVCapturePhotoSettings()
+            photoOutput.capturePhoto(with: settings, delegate: self)
+            photonum += 1 // 撮影回数をカウント
+            print("Captured photo #\(photonum)")
 
-                    if photonum >= 98 {
-                        print("撮影を終了します。")
-                        timer?.invalidate()
-                        DispatchQueue.main.async {
-                            self.isCapturing = false
-                            self.photonum = 0
-                            self.onCaptureComplete?() // ContentView に通知
-                        }
-                    }
+            if photonum >= 98 {
+                print("撮影を終了します。")
+                timer?.invalidate()
+                DispatchQueue.main.async {
+                    self.isCapturing = false
+                    self.photonum = 0
+                    self.onCaptureComplete?() // ContentView に通知
                 }
-
+            }
+        }
 
         override func layout() {
             super.layout()
@@ -90,20 +89,21 @@ struct CameraView: NSViewRepresentable {
     }
 
     func makeNSView(context: Context) -> CameraPreviewView {
-            let previewView = CameraPreviewView()
-            previewView.onCapture = onCapture
-            previewView.onCaptureComplete = onCaptureComplete // クロージャを渡す
-            return previewView
-        }
+        let previewView = CameraPreviewView()
+        previewView.onCapture = onCapture
+        previewView.onCaptureComplete = onCaptureComplete // クロージャを渡す
+        return previewView
+    }
 
-        func updateNSView(_ nsView: CameraPreviewView, context: Context) {
-            nsView.isCapturing = isCapturing
-            if isCapturing {
-                nsView.startCapturingPhotos()
-            }
+    func updateNSView(_ nsView: CameraPreviewView, context: Context) {
+        nsView.isCapturing = isCapturing
+        if isCapturing {
+            nsView.startCapturingPhotos()
         }
+    }
 }
 
+// Cropping Extension for NSImage
 extension NSImage {
     func cropped(to rect: CGRect) -> NSImage? {
         guard let cgImage = self.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
@@ -111,7 +111,17 @@ extension NSImage {
             return nil
         }
 
-        guard let croppedCGImage = cgImage.cropping(to: rect) else {
+        // 中央を基準にしたクロップ領域を計算
+        let offsetX = CGFloat(cgImage.width - Int(rect.width)) / 2
+        let offsetY = CGFloat(cgImage.height - Int(rect.height)) / 2
+        let centerCropRect = CGRect(
+            x: offsetX,
+            y: offsetY,
+            width: rect.width,
+            height: rect.height
+        )
+
+        guard let croppedCGImage = cgImage.cropping(to: centerCropRect) else {
             print("画像のクロップに失敗しました")
             return nil
         }
@@ -121,6 +131,7 @@ extension NSImage {
 }
 
 
+// AVCapturePhotoCaptureDelegate
 extension CameraView.CameraPreviewView: AVCapturePhotoCaptureDelegate {
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
         if let error = error {
