@@ -1,10 +1,3 @@
-//
-//  ModelLoader.swift
-//  Xcode-AI-MINT-forViT
-//
-//  Created by Mizking-Kobayashi on 2024/12/24.
-//
-
 import CoreML
 import SwiftUI
 
@@ -39,30 +32,26 @@ class AIModelHandler {
     ]
 
     // 前処理済みの画像を予測する関数
-    func predict(images multiArray: MLMultiArray) -> String? {
+    func predict(images multiArray: MLMultiArray, completion: @escaping (String?) -> Void) {
         guard let model = self.model else {
             print("モデルが初期化されていません")
-            return nil
+            completion(nil)
+            return
         }
 
-        // モデルに入力するためにAI_MINT_ViT1Inputを作成
-        let input = AI_MINT_ViT1Input(input_1: multiArray)
+        // バックグラウンドで非同期処理を実行
+        DispatchQueue.global(qos: .userInitiated).async {
+            let input = AI_MINT_ViT1Input(input_1: multiArray)
 
-        // モデルを使って予測する処理
-        do {
-            // 予測メソッドを呼び出し、AI_MINT_ViT1Inputを入力として渡す
-            let prediction = try model.prediction(input: input)
-            print(prediction)
+            do {
+                let prediction = try model.prediction(input: input)
 
-            // 出力型を確認
-            if let output = prediction.featureValue(for: "Identity") {
-                // 出力が MultiArray 形式の場合、型にキャストして取り出す
-                if let multiArray = output.multiArrayValue {
-                    // 最大確率のインデックスを取得
+                if let output = prediction.featureValue(for: "Identity"),
+                   let multiArray = output.multiArrayValue {
                     var maxIndex = 0
                     var maxValue: Float = -Float.greatestFiniteMagnitude
 
-                    // 最大確率を持つインデックスを検索
+                    // 最大値を求めるループ
                     for i in 0..<multiArray.count {
                         let value = multiArray[i].floatValue
                         if value > maxValue {
@@ -71,27 +60,26 @@ class AIModelHandler {
                         }
                     }
 
-                    // 最大インデックスに対応するラベルを返す
-                    let predictedLabel = labelMap.first { $0.value == maxIndex }?.key
-                    if let label = predictedLabel {
-                        print("予測結果: \(label)")
-                        return label
-                    } else {
-                        print("無効なインデックスです")
+                    // ラベルを取得
+                    let predictedLabel = self.labelMap.first { $0.value == maxIndex }?.key
+
+                    // メインスレッドに結果を返す
+                    DispatchQueue.main.async {
+                        print("予測結果: \(predictedLabel ?? "不明")")
+                        completion(predictedLabel)
                     }
                 } else {
-                    print("MultiArray に変換できませんでした")
+                    print("出力値が見つかりません")
+                    DispatchQueue.main.async {
+                        completion(nil)
+                    }
                 }
-            } else {
-                print("出力値が見つかりません")
+            } catch {
+                print("予測に失敗しました: \(error)")
+                DispatchQueue.main.async {
+                    completion(nil)
+                }
             }
-        } catch {
-            print("予測に失敗しました: \(error)")
-            return nil
         }
-
-        // 結果が得られなかった場合
-        return nil
     }
-
 }

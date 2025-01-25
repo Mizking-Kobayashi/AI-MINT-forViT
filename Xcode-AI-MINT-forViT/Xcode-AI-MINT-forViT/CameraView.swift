@@ -15,7 +15,6 @@ struct CameraView: NSViewRepresentable {
         var timer: Timer?
         var photonum = 0
         var onCapture: ((NSImage) -> Void)? // クロージャを持たせる
-        var isCapturing: Bool = false
         var onCaptureComplete: (() -> Void)?
 
         override init(frame frameRect: NSRect) {
@@ -51,30 +50,32 @@ struct CameraView: NSViewRepresentable {
 
         // 1回だけ撮影を開始する
         func startCapturingPhotos() {
+            guard timer == nil else { return } // 既に実行中ならスキップ
+            photonum = 0
             timer = Timer.scheduledTimer(withTimeInterval: 0.033, repeats: true) { [weak self] _ in
                 guard let self = self else { return }
-                if self.photonum < 98 {
-                    self.capturePhoto() // 画像をキャプチャ
-                } else {
-                    self.timer?.invalidate() // 98枚撮影したら停止
-                }
+                self.capturePhoto()
             }
         }
 
         private func capturePhoto() {
+            guard photonum < 98 else {
+                print("撮影を終了します。")
+                stopCapturing()
+                return
+            }
+            
             let settings = AVCapturePhotoSettings()
             photoOutput.capturePhoto(with: settings, delegate: self)
-            photonum += 1 // 撮影回数をカウント
+            photonum += 1
             print("Captured photo #\(photonum)")
+        }
 
-            if photonum >= 98 {
-                print("撮影を終了します。")
-                timer?.invalidate()
-                DispatchQueue.main.async {
-                    self.isCapturing = false
-                    self.photonum = 0
-                    self.onCaptureComplete?() // ContentView に通知
-                }
+        private func stopCapturing() {
+            timer?.invalidate()
+            timer = nil
+            DispatchQueue.main.async {
+                self.onCaptureComplete?()
             }
         }
 
@@ -84,24 +85,24 @@ struct CameraView: NSViewRepresentable {
         }
 
         deinit {
-            timer?.invalidate()
+            stopCapturing()
         }
     }
 
     func makeNSView(context: Context) -> CameraPreviewView {
         let previewView = CameraPreviewView()
         previewView.onCapture = onCapture
-        previewView.onCaptureComplete = onCaptureComplete // クロージャを渡す
+        previewView.onCaptureComplete = onCaptureComplete
         return previewView
     }
 
     func updateNSView(_ nsView: CameraPreviewView, context: Context) {
-        nsView.isCapturing = isCapturing
         if isCapturing {
             nsView.startCapturingPhotos()
         }
     }
 }
+
 
 // Cropping Extension for NSImage
 extension NSImage {
@@ -121,6 +122,7 @@ extension NSImage {
             height: rect.height
         )
 
+        //ここで画像をクロップ
         guard let croppedCGImage = cgImage.cropping(to: centerCropRect) else {
             print("画像のクロップに失敗しました")
             return nil

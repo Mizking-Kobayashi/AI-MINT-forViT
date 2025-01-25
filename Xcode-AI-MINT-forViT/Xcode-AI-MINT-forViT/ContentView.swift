@@ -6,6 +6,8 @@ struct ContentView: View {
     @State private var predictionResult: String? = nil
     @State private var isCapturing: Bool = false // 初期値は `false` に設定して撮影をすぐに開始しない
     @State private var cameraPermissionGranted: Bool = false // カメラ許可の状態を管理
+    @StateObject private var faceLandmarkDetector = FaceLandmarkDetector()
+    @State private var isDebugMode: Bool = false // デバッグモードのオン・オフを管理
     private let saveDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
 
     private let modelHandler = AIModelHandler()
@@ -26,6 +28,21 @@ struct ContentView: View {
                     Rectangle()
                         .stroke(Color.red.opacity(0.2), lineWidth: 2)
                         .frame(width: 200, height: 200)
+                    
+                    if isDebugMode {
+                        // ランドマークの描画
+                        GeometryReader { geometry in
+                            ForEach(faceLandmarkDetector.landmarks.map { CGPoint(x: $0.0, y: $0.1) }, id: \.self) { point in
+                                Circle()
+                                    .fill(Color.blue)
+                                    .frame(width: 5, height: 5)
+                                    .position(
+                                        x: point.x * geometry.size.width,
+                                        y: point.y * geometry.size.height
+                                    )
+                            }
+                        }
+                    }
 
                     // スクロールするテキストを上に配置
                     VStack {
@@ -46,7 +63,40 @@ struct ContentView: View {
         .onAppear {
             checkCameraPermissionAndStart() // カメラ許可を確認して撮影を開始
         }
+        // デバッグスイッチ
+        Toggle("Debug Mode", isOn: $isDebugMode)
+            .padding()
+            .onChange(of: isDebugMode) { newValue in
+            handleDebugModeChange(newValue)
+        }
+        
+        // 撮影 or 予測のステータス表示
+        VStack {
+            Spacer()
+            HStack {
+                Spacer()
+                Circle()
+                    .fill(captureIndicatorColor)
+                    .frame(width: 20, height: 20)
+                    .padding(10)
+            }
+        }
     }
+    
+    // 丸の色を状態に応じて変更
+    var captureIndicatorColor: Color {
+        return isCapturing ? .green : .red
+    }
+    
+    // デバッグモード切り替え時の処理
+        private func handleDebugModeChange(_ isDebug: Bool) {
+            if isDebug {
+                print("Debug Mode: ON")
+            } else {
+                print("Debug Mode: OFF")
+            }
+        }
+
 
     private func checkCameraPermissionAndStart() {
         let status = AVCaptureDevice.authorizationStatus(for: .video)
@@ -95,7 +145,8 @@ struct ContentView: View {
             print("CGImageへの変換に失敗しました")
             return
         }
-
+        
+        faceLandmarkDetector.detectLandmarks(from: cgImage)
         // クロップするサイズ (200x200)
         let cropWidth: CGFloat = 430
         let cropHeight: CGFloat = 430
@@ -121,6 +172,7 @@ struct ContentView: View {
         if images.count == 98 {
             isCapturing = false
             predictFromImages()
+            images.removeAll()
         }
     }
 
@@ -152,15 +204,18 @@ struct ContentView: View {
             return
         }
 
-        if let result = modelHandler.predict(images: preprocessedMultiArray) {
-            predictionResult = result
-            print("予測結果: \(result)")
-        } else {
-            print("予測に失敗しました")
-            predictionResult = "予測に失敗しました"
+        modelHandler.predict(images: preprocessedMultiArray) { result in
+            if let result = result {
+                predictionResult = result
+                print("予測結果: \(result)")
+            } else {
+                print("予測に失敗しました")
+                predictionResult = "予測に失敗しました"
+            }
+
+            restartCaptureSession()
         }
 
-        restartCaptureSession()
     }
 
     private func restartCaptureSession() {
