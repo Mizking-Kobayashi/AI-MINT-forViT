@@ -7,4 +7,4 @@ So MacOS is only operating-system to run these files.
 
 # Award
 2025/1/25
-This project was introduced in 熊本県版未踏的プロジェクトIPPO(一歩) by Mizking-Kobayashi
+This project was introduced in 熊本県版未踏的プロジェクトIPPO(一歩)
